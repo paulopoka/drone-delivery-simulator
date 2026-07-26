@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.env
+*.log
+npm-debug.log*
+.DS_Store
+
+# Banco SQLite gerado em tempo de execução (STORAGE=sqlite)
+*.db
+*.db-wal
+*.db-shm

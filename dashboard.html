@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Torre de Controle — Drone Delivery Simulator</title>
+<style>
+  :root {
+    --navy: #050b2e;
+    --navy-panel: #0a1345;
+    --navy-line: #1c2764;
+    --cyan: #3ee6e0;
+    --orange: #ff6a3d;
+    --text: #eef1ff;
+    --text-dim: #8891c9;
+    --danger: #ff5470;
+    --ok: #3ee6a8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(circle at 15% 0%, #0d1550 0%, var(--navy) 55%);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 32px 24px 64px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--navy-line);
+    padding-bottom: 20px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-icon {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  h1 { font-size: 22px; margin: 0; font-weight: 700; letter-spacing: 0.2px; }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin-top: 2px; font-family: 'Consolas', monospace; }
+
+  .conn {
+    display: flex; align-items: center; gap: 16px;
+    font-family: 'Consolas', monospace; font-size: 13px;
+  }
+  .conn input {
+    background: var(--navy-panel);
+    border: 1px solid var(--navy-line);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    width: 210px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-dim); display: inline-block; margin-right: 6px; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .dot.off { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+  .grid { display: grid; grid-template-columns: 380px 1fr; gap: 24px; }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--navy-panel);
+    border: 1px solid var(--navy-line);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .panel h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--cyan);
+    margin: 0 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  label { display: block; font-size: 12px; color: var(--text-dim); margin: 12px 0 6px; }
+  label:first-of-type { margin-top: 0; }
+  input, select {
+    width: 100%;
+    background: #050b2e;
+    border: 1px solid var(--navy-line);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--cyan); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 11px 16px;
+    font-family: inherit;
+    transition: transform 0.08s ease, opacity 0.15s ease;
+  }
+  button:active { transform: scale(0.98); }
+  .btn-primary { background: var(--orange); color: #1a0a02; width: 100%; margin-top: 18px; }
+  .btn-secondary { background: transparent; color: var(--cyan); border: 1px solid var(--cyan); }
+  .btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--navy-line); font-size: 12px; padding: 6px 10px; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+
+  .empty { color: var(--text-dim); font-size: 13px; font-style: italic; padding: 12px 0; }
+
+  .order-item, .trip-item, .drone-item {
+    background: #050b2e;
+    border: 1px solid var(--navy-line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+  .order-item .top, .trip-item .top, .drone-item .top {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'Consolas', monospace; margin-bottom: 4px;
+  }
+  .badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .badge.alta { background: rgba(255,84,112,0.15); color: var(--danger); }
+  .badge.media { background: rgba(255,106,61,0.15); color: var(--orange); }
+  .badge.baixa { background: rgba(62,230,224,0.15); color: var(--cyan); }
+  .badge.idle { background: rgba(62,230,168,0.15); color: var(--ok); }
+  .badge.entregue { background: rgba(62,230,168,0.15); color: var(--ok); }
+  .meta { color: var(--text-dim); font-size: 12px; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+  .stat { background: #050b2e; border: 1px solid var(--navy-line); border-radius: 8px; padding: 12px; text-align: center; }
+  .stat .num { font-size: 20px; font-weight: 700; color: var(--cyan); font-family: 'Consolas', monospace; }
+  .stat .lbl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--navy-panel); border: 1px solid var(--navy-line);
+    padding: 12px 20px; border-radius: 8px; font-size: 13px;
+    display: none; max-width: 480px; text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .toast.show { display: block; }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+  .toast.success { border-color: var(--ok); color: var(--ok); }
+
+  .weight-bar { height: 4px; background: var(--navy-line); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .weight-bar-fill { height: 100%; background: var(--cyan); }
+
+  /* Mapa ASCII das entregas */
+  .map-box {
+    background: #030720;
+    border: 1px solid var(--navy-line);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+  }
+  .map-box pre {
+    margin: 0;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--cyan);
+    white-space: pre;
+  }
+
+  /* Comparativo de estratégias */
+  .cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .cmp-table th {
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-dim);
+    font-weight: 600;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--navy-line);
+  }
+  .cmp-table td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(28,39,100,0.5);
+    font-family: 'Consolas', monospace;
+  }
+  .cmp-table tr.best td { background: rgba(62,230,168,0.07); color: var(--ok); font-weight: 700; }
+  .cmp-table .strategy-desc {
+    display: block;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 400;
+    margin-top: 3px;
+  }
+  .cmp-note { color: var(--text-dim); font-size: 11px; margin-top: 12px; font-style: italic; }
+
+  /* Painéis recolhíveis: listas crescem sem limite e alongam demais a página */
+  .panel.collapsible > h2 {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+  }
+  .panel.collapsible > h2:hover { color: var(--text); }
+  .chevron {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--text-dim);
+    transition: transform 0.15s ease;
+  }
+  .panel.collapsed .chevron { transform: rotate(-90deg); }
+  .panel.collapsed > h2 { margin-bottom: 0; }
+  .panel.collapsed .panel-body { display: none; }
+
+  /* Mesmo aberto, a lista rola por dentro em vez de esticar a página */
+  .panel-body.scrollable {
+    max-height: 340px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .panel-body.scrollable::-webkit-scrollbar { width: 8px; }
+  .panel-body.scrollable::-webkit-scrollbar-track { background: transparent; }
+  .panel-body.scrollable::-webkit-scrollbar-thumb {
+    background: var(--navy-line);
+    border-radius: 4px;
+  }
+  .panel-body.scrollable::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  .trips-scroll { max-height: 260px; overflow-y: auto; padding-right: 4px; }
+  .trips-scroll::-webkit-scrollbar { width: 8px; }
+  .trips-scroll::-webkit-scrollbar-track { background: transparent; }
+  .trips-scroll::-webkit-scrollbar-thumb { background: var(--navy-line); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🚁</div>
+      <div>
+        <h1>Torre de Controle</h1>
+        <div class="subtitle">drone-delivery-simulator</div>
+      </div>
+    </div>
+    <div class="conn">
+      <span><span id="statusDot" class="dot off"></span><span id="statusText">verificando...</span></span>
+      <input id="baseUrl" value="http://localhost:3000" spellcheck="false">
+      <button class="btn-ghost" onclick="checkConnection()">reconectar</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- COLUNA ESQUERDA: FORM -->
+    <div>
+      <div class="panel collapsible" id="newOrderPanel">
+        <h2 onclick="togglePanel('newOrderPanel')">
+          Novo pedido
+          <span class="chevron">▼</span>
+        </h2>
+        <div class="panel-body">
+          <div class="row2">
+            <div>
+              <label>Coordenada X</label>
+              <input id="orderX" type="number" value="3" step="0.1">
+            </div>
+            <div>
+              <label>Coordenada Y</label>
+              <input id="orderY" type="number" value="4" step="0.1">
+            </div>
+          </div>
+          <label>Peso do pacote (kg)</label>
+          <input id="orderWeight" type="number" value="1.5" step="0.1" min="0.1">
+          <label>Prioridade</label>
+          <select id="orderPriority">
+            <option value="alta">Alta</option>
+            <option value="media">Média</option>
+            <option value="baixa">Baixa</option>
+          </select>
+          <button class="btn-primary" onclick="createOrder()" id="createBtn">+ Criar pedido</button>
+        </div>
+      </div>
+
+      <div class="panel collapsible" id="zonePanel">
+        <h2 onclick="togglePanel('zonePanel')">
+          Zona de exclusão aérea <span id="zoneCount" class="meta"></span>
+          <span class="chevron">▼</span>
+        </h2>
+        <div class="panel-body">
+          <div class="row2">
+            <div>
+              <label>Centro X</label>
+              <input id="zoneX" type="number" value="2" step="0.1">
+            </div>
+            <div>
+              <label>Centro Y</label>
+              <input id="zoneY" type="number" value="0" step="0.1">
+            </div>
+          </div>
+          <label>Raio (km)</label>
+          <input id="zoneRadius" type="number" value="0.8" step="0.1" min="0.1">
+          <label>Nome (opcional)</label>
+          <input id="zoneName" type="text" placeholder="ex: aeroporto">
+          <button class="btn-primary" onclick="createZone()" id="zoneBtn">⛔ Criar zona</button>
+          <div id="zonesList" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Ações</h2>
+        <div class="actions">
+          <button class="btn-secondary" style="flex:1" onclick="planRoutes()">▶ Gerar rota de entrega</button>
+        </div>
+        <div class="actions" style="margin-top:10px">
+          <button class="btn-secondary" style="flex:1" onclick="compareStrategies()">⚖ Comparar estratégias</button>
+        </div>
+        <div class="actions" style="margin-top:10px">
+          <button class="btn-ghost" style="flex:1" onclick="seedDemo()" id="demoBtn">✨ carregar cenário de exemplo</button>
+        </div>
+        <div class="actions" style="margin-top:10px">
+          <button class="btn-ghost" style="flex:1" onclick="refreshAll()">↻ atualizar tudo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA: DADOS -->
+    <div>
+      <div class="panel collapsible" id="summaryPanel" style="display:none">
+        <h2 onclick="togglePanel('summaryPanel')">
+          Resumo da última simulação
+          <span class="chevron">▼</span>
+        </h2>
+        <div class="panel-body">
+          <div class="summary-grid">
+            <div class="stat"><div class="num" id="sumTrips">-</div><div class="lbl">Viagens</div></div>
+            <div class="stat"><div class="num" id="sumDeliveries">-</div><div class="lbl">Entregas</div></div>
+            <div class="stat"><div class="num" id="sumDistance">-</div><div class="lbl">Km totais</div></div>
+            <div class="stat"><div class="num" id="sumAvgTime">-</div><div class="lbl">Min. médio</div></div>
+          </div>
+          <div class="summary-grid">
+            <div class="stat"><div class="num" id="sumSaved">-</div><div class="lbl">Viagens poupadas</div></div>
+            <div class="stat"><div class="num" id="sumSavings">-</div><div class="lbl">Economia</div></div>
+            <div class="stat"><div class="num" id="sumBestDrone">-</div><div class="lbl">Drone + eficiente</div></div>
+            <div class="stat"><div class="num" id="sumBestRatio">-</div><div class="lbl">Entregas / km</div></div>
+          </div>
+          <div id="tripsList" class="trips-scroll"></div>
+        </div>
+      </div>
+
+      <div class="panel collapsible" id="comparePanel" style="display:none">
+        <h2 onclick="togglePanel('comparePanel')">
+          Comparativo de estratégias de alocação
+          <span class="chevron">▼</span>
+        </h2>
+        <div class="panel-body">
+        <table class="cmp-table">
+          <thead>
+            <tr>
+              <th>Estratégia</th>
+              <th>Viagens</th>
+              <th>Distância</th>
+              <th>Economia</th>
+            </tr>
+          </thead>
+          <tbody id="compareBody"></tbody>
+        </table>
+          <div class="cmp-note">
+            Execução a seco sobre os pedidos pendentes — não cria drones nem altera o estado dos pedidos.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel collapsible" id="mapPanel">
+        <h2 onclick="togglePanel('mapPanel')">
+          Mapa das entregas
+          <span class="chevron">▼</span>
+        </h2>
+        <div class="panel-body">
+          <div class="map-box"><pre id="mapBox">Carregando...</pre></div>
+        </div>
+      </div>
+
+      <div class="panel collapsible" id="ordersPanel">
+        <h2 onclick="togglePanel('ordersPanel')">
+          Pedidos pendentes <span id="orderCount" class="meta"></span>
+          <span class="chevron">▼</span>
+        </h2>
+        <div class="panel-body scrollable">
+          <div id="ordersList"><div class="empty">Carregando...</div></div>
+        </div>
+      </div>
+
+      <div class="panel collapsible" id="dronesPanel">
+        <h2 onclick="togglePanel('dronesPanel')">
+          Drones <span id="droneCount" class="meta"></span>
+          <span class="chevron">▼</span>
+        </h2>
+        <div class="panel-body scrollable">
+          <div id="dronesList"><div class="empty">Carregando...</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function baseUrl() { return document.getElementById('baseUrl').value.replace(/\/$/, ''); }
+
+/* ---- Painéis recolhíveis ---- */
+
+const COLLAPSE_KEY = 'drone-dashboard-collapsed';
+
+function collapsedPanels() {
+  try {
+    return JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function togglePanel(id) {
+  const panel = document.getElementById(id);
+  if (!panel) return;
+
+  panel.classList.toggle('collapsed');
+
+  // Guarda a preferência para ela sobreviver ao refresh da página.
+  const collapsed = collapsedPanels().filter(p => p !== id);
+  if (panel.classList.contains('collapsed')) collapsed.push(id);
+  try {
+    localStorage.setItem(COLLAPSE_KEY, JSON.stringify(collapsed));
+  } catch (e) {
+    /* modo privativo pode bloquear localStorage — recolher continua funcionando */
+  }
+}
+
+function restoreCollapsedPanels() {
+  collapsedPanels().forEach(id => {
+    const panel = document.getElementById(id);
+    if (panel) panel.classList.add('collapsed');
+  });
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+async function checkConnection() {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  text.textContent = 'verificando...';
+  try {
+    const res = await fetch(baseUrl() + '/drones/status');
+    if (!res.ok) throw new Error();
+    dot.className = 'dot on';
+    text.textContent = 'conectado';
+    refreshAll();
+  } catch (e) {
+    dot.className = 'dot off';
+    text.textContent = 'desconectado — confira se "npm run dev" está rodando';
+  }
+}
+
+async function createOrder() {
+  const btn = document.getElementById('createBtn');
+  btn.disabled = true;
+  try {
+    const body = {
+      location: {
+        x: parseFloat(document.getElementById('orderX').value),
+        y: parseFloat(document.getElementById('orderY').value),
+      },
+      weightKg: parseFloat(document.getElementById('orderWeight').value),
+      priority: document.getElementById('orderPriority').value,
+    };
+    const res = await fetch(baseUrl() + '/pedidos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Erro ao criar pedido', 'error');
+    } else {
+      showToast('Pedido ' + data.id + ' criado', 'success');
+      refreshOrders();
+    }
+  } catch (e) {
+    showToast('Não foi possível conectar ao servidor', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function refreshOrders() {
+  const list = document.getElementById('ordersList');
+  try {
+    const res = await fetch(baseUrl() + '/pedidos');
+    const orders = await res.json();
+    document.getElementById('orderCount').textContent = '(' + orders.length + ')';
+    if (orders.length === 0) {
+      list.innerHTML = '<div class="empty">Nenhum pedido criado ainda.</div>';
+      return;
+    }
+    list.innerHTML = orders.map(o => `
+      <div class="order-item">
+        <div class="top">
+          <span>${o.id}</span>
+          <span class="badge ${o.priority}">${o.priority}</span>
+        </div>
+        <div class="meta">
+          (${o.location.x}, ${o.location.y}) · ${o.weightKg}kg
+          ${o.isDelivered ? ' · <span class="badge entregue">entregue</span>' : (o.assignedDroneId ? ' · alocado em ' + o.assignedDroneId : ' · aguardando alocação')}
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty">Erro ao carregar pedidos.</div>';
+  }
+}
+
+async function refreshDrones() {
+  const list = document.getElementById('dronesList');
+  try {
+    const res = await fetch(baseUrl() + '/drones/status');
+    const drones = await res.json();
+    document.getElementById('droneCount').textContent = '(' + drones.length + ')';
+    if (drones.length === 0) {
+      list.innerHTML = '<div class="empty">Nenhum drone em operação ainda. Gere uma rota de entrega primeiro.</div>';
+      return;
+    }
+    list.innerHTML = drones.map(d => `
+      <div class="drone-item">
+        <div class="top">
+          <span>${d.id}</span>
+          <span class="badge idle">${d.status}</span>
+        </div>
+        <div class="meta">
+          bateria ${d.batteryPercent}% · ${d.totalDistanceFlownKm}km voados · ${d.totalDeliveries} entregas
+        </div>
+        <div class="weight-bar"><div class="weight-bar-fill" style="width:${d.batteryPercent}%"></div></div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty">Erro ao carregar drones.</div>';
+  }
+}
+
+async function planRoutes() {
+  try {
+    const res = await fetch(baseUrl() + '/entregas/rota');
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Erro ao gerar rotas', 'error');
+      return;
+    }
+    if (!data.trips || data.trips.length === 0) {
+      showToast(data.message || 'Nenhum pedido pendente para alocar.', 'error');
+      return;
+    }
+    document.getElementById('summaryPanel').style.display = 'block';
+    document.getElementById('sumTrips').textContent = data.summary.totalTrips;
+    document.getElementById('sumDeliveries').textContent = data.summary.totalDeliveries;
+    document.getElementById('sumDistance').textContent = data.summary.totalDistanceKm;
+    document.getElementById('sumAvgTime').textContent = data.summary.averageDeliveryTimeMinutes;
+
+    const eff = data.efficiency || {};
+    const best = data.summary.mostEfficientDrone;
+    document.getElementById('sumSaved').textContent = eff.tripsSaved != null ? eff.tripsSaved : '-';
+    document.getElementById('sumSavings').textContent = eff.savingsPercent != null ? eff.savingsPercent + '%' : '-';
+    document.getElementById('sumBestDrone').textContent = best ? best.droneId.replace('drone-', '#') : '-';
+    document.getElementById('sumBestRatio').textContent = best ? best.deliveriesPerKm : '-';
+
+    if (data.summary.tripsWithDetour > 0) {
+      showToast(data.summary.tripsWithDetour + ' viagem(ns) contornaram zonas de exclusão', 'success');
+    }
+
+    document.getElementById('tripsList').innerHTML = data.trips.map((t, i) => `
+      <div class="trip-item">
+        <div class="top">
+          <span>Viagem ${i + 1} · ${t.droneId}</span>
+          <span class="meta">${t.distanceKm}km</span>
+        </div>
+        <div class="meta">${t.orders.length} pacote(s): ${t.orders.join(', ')} · ${t.totalWeightKg}kg total</div>
+      </div>
+    `).join('') + (data.unassignedOrders.length > 0 ? `
+      <div class="trip-item" style="border-color: var(--danger)">
+        <div class="top"><span style="color: var(--danger)">Não alocados</span></div>
+        <div class="meta">${data.unassignedOrders.map(o => o.id).join(', ')}</div>
+      </div>
+    ` : '');
+
+    showToast('Rota gerada: ' + data.summary.totalTrips + ' viagem(ns), ' + data.summary.totalDeliveries + ' entrega(s)', 'success');
+    refreshOrders();
+    refreshDrones();
+    refreshMap();
+  } catch (e) {
+    showToast('Não foi possível conectar ao servidor', 'error');
+  }
+}
+
+async function refreshMap() {
+  const box = document.getElementById('mapBox');
+  try {
+    const res = await fetch(baseUrl() + '/entregas/mapa');
+    box.textContent = await res.text();
+  } catch (e) {
+    box.textContent = 'Erro ao carregar o mapa.';
+  }
+}
+
+async function seedDemo() {
+  const btn = document.getElementById('demoBtn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(baseUrl() + '/simulacao/demo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantidade: 15 }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Erro ao criar cenário', 'error');
+      return;
+    }
+    showToast(data.message, 'success');
+    refreshOrders();
+    refreshMap();
+  } catch (e) {
+    showToast('Não foi possível conectar ao servidor', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function compareStrategies() {
+  try {
+    const res = await fetch(baseUrl() + '/entregas/comparar-estrategias');
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Erro ao comparar estratégias', 'error');
+      return;
+    }
+    if (!data.results || data.results.length === 0) {
+      showToast('Não há pedidos pendentes para comparar.', 'error');
+      return;
+    }
+
+    document.getElementById('comparePanel').style.display = 'block';
+    document.getElementById('compareBody').innerHTML = data.results.map(r => `
+      <tr class="${r.isBest ? 'best' : ''}">
+        <td>
+          ${r.isBest ? '★ ' : ''}${r.strategy}
+          <span class="strategy-desc">${r.description}</span>
+        </td>
+        <td>${r.trips}</td>
+        <td>${r.totalDistanceKm} km</td>
+        <td>${r.savingsPercent > 0 ? '−' + r.savingsPercent + '%' : '—'}</td>
+      </tr>
+    `).join('');
+
+    showToast('Melhor estratégia: ' + data.best, 'success');
+  } catch (e) {
+    showToast('Não foi possível conectar ao servidor', 'error');
+  }
+}
+
+async function createZone() {
+  const btn = document.getElementById('zoneBtn');
+  btn.disabled = true;
+  try {
+    const name = document.getElementById('zoneName').value.trim();
+    const body = {
+      center: {
+        x: parseFloat(document.getElementById('zoneX').value),
+        y: parseFloat(document.getElementById('zoneY').value),
+      },
+      radiusKm: parseFloat(document.getElementById('zoneRadius').value),
+    };
+    if (name) body.name = name;
+
+    const res = await fetch(baseUrl() + '/zonas-exclusao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Erro ao criar zona', 'error');
+      return;
+    }
+    showToast('Zona ' + data.name + ' criada', 'success');
+    refreshZones();
+    refreshMap();
+  } catch (e) {
+    showToast('Não foi possível conectar ao servidor', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function removeZone(id) {
+  try {
+    await fetch(baseUrl() + '/zonas-exclusao/' + id, { method: 'DELETE' });
+    showToast('Zona removida', 'success');
+    refreshZones();
+    refreshMap();
+  } catch (e) {
+    showToast('Não foi possível conectar ao servidor', 'error');
+  }
+}
+
+async function refreshZones() {
+  const list = document.getElementById('zonesList');
+  try {
+    const res = await fetch(baseUrl() + '/zonas-exclusao');
+    const zones = await res.json();
+    document.getElementById('zoneCount').textContent = zones.length > 0 ? '(' + zones.length + ')' : '';
+    if (zones.length === 0) {
+      list.innerHTML = '<div class="empty">Nenhuma zona ativa.</div>';
+      return;
+    }
+    list.innerHTML = zones.map(z => `
+      <div class="order-item">
+        <div class="top">
+          <span>${z.name}</span>
+          <button class="btn-ghost" onclick="removeZone('${z.id}')">remover</button>
+        </div>
+        <div class="meta">centro (${z.center.x}, ${z.center.y}) · raio ${z.radiusKm}km</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    list.innerHTML = '<div class="empty">Erro ao carregar zonas.</div>';
+  }
+}
+
+function refreshAll() {
+  refreshOrders();
+  refreshDrones();
+  refreshZones();
+  refreshMap();
+}
+
+restoreCollapsedPanels();
+checkConnection();
+</script>
+</body>
+</html>
