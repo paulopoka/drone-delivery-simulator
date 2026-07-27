@@ -24,6 +24,7 @@ Teste técnico — Processo Seletivo dti digital (Estágio Dev).
 - [Referência da API](#referência-da-api)
 - [Testes](#testes)
 - [Funcionalidades implementadas](#funcionalidades-implementadas)
+- [Skills de agente previstas](#skills-de-agente-previstas)
 - [Possíveis evoluções](#possíveis-evoluções)
 
 ---
@@ -597,6 +598,62 @@ alcance, e planejar nunca muta os pedidos.
 - [x] Persistência em banco (SQLite) atrás de interfaces, com suíte de
       contrato garantindo que os dois drivers se comportam igual
 - [x] Endpoint de cenário de exemplo (`POST /simulacao/demo`)
+
+---
+
+## Skills de agente previstas
+
+O projeto foi desenvolvido com auxílio de IA (ver [AI_USAGE.md](AI_USAGE.md)).
+*Skills* são instruções empacotadas que padronizam tarefas repetidas do
+agente — o equivalente, para o ferramental de IA, do que um script npm é
+para o desenvolvedor.
+
+As três abaixo não estão implementadas. Estão documentadas porque cada uma
+nasceu de um problema **concreto** desta base de código, e o registro do
+problema vale mesmo sem a automação.
+
+### `rodar-simulador` — subir e exercitar a API
+
+Padroniza o ciclo: liberar a porta 3000, subir o servidor (em memória ou
+`STORAGE=sqlite`), popular um cenário e percorrer os endpoints.
+
+> ⚠️ **O problema que motivou:** durante um teste manual do modo SQLite,
+> uma chamada à API respondeu com sucesso e quase confirmou que a
+> persistência funcionava. Mas o servidor que respondeu era **outro**,
+> em memória, ainda ocupando a porta 3000 de uma execução anterior — o
+> novo processo nem tinha subido. O erro só não passou porque o arquivo
+> `.db` foi conferido e não existia.
+
+Regras que a skill fixaria: matar o listener da porta **antes** de subir,
+e nunca declarar que a persistência funcionou sem verificar que o arquivo
+de banco foi criado.
+
+### `verificar-dashboard` — testar a interface em browser
+
+Abre `dashboard.html` num browser headless, popula pedidos, clica para
+recolher um painel, recarrega a página e confere que o estado foi
+restaurado do `localStorage`, terminando em screenshot e leitura do
+console.
+
+> ⚠️ **O problema que motivou:** os painéis recolhíveis foram validados
+> apenas de forma **estática** — sintaxe do JavaScript, IDs cruzando com
+> as chamadas de `togglePanel()`, presença das regras de CSS. Nenhum
+> painel chegou a ser clicado automaticamente; a conferência visual foi
+> feita à mão. É a única parte do projeto sem verificação automatizada.
+
+### `checagem-pre-entrega` — validar antes de publicar
+
+Roda a suíte, compara o total de testes com o número declarado no README,
+varre os arquivos atrás de acentuação corrompida, confirma que o
+`.gitignore` está barrando `node_modules`/`dist`/`*.db` e revisa o que
+entraria num commit.
+
+> ⚠️ **O problema que motivou:** dois defeitos silenciosos apareceram
+> perto da entrega. Um comando PowerShell de substituição em massa gravou
+> arquivos sem `-Encoding utf8` e corrompeu acentos no README e num
+> arquivo de teste (`á` virou `Ã¡`, `—` virou `â€"`), exigindo reparo byte
+> a byte. E a contagem de testes no README é escrita à mão — desatualiza
+> sozinha a cada teste novo, sem nada acusar.
 
 ---
 
